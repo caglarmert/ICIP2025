@@ -3,40 +3,41 @@ client = OpenAI(api_key="sk-proj-etjVxjrc5fPIN2Hzz9ew9mNLKejEE8jYKo5F6WnL6HuTdv0
 
 def query_gpt_initial():
     prompt = f"""
-You are an expert in data augmentation for deep learning.
-
+You are an expert in data augmentation for deep learning. Remember the following details about your task.
 Dataset: High-resolution histopathological dataset providing detailed pixel-wise segmentation masks for five distinct classes: Grade-1 (well-differentiated), Grade-2 (moderately differentiated), Grade-3 (poorly differentiated) tumors, and Normal Mucosa. Regions not classified under these categories were labeled as "Others," including non-cancerous areas like glass plates and stroma.
 Images: histopathological RGB, sliced into 224x224 patches during training.
 Annotations: PNG masks with 5 classes (background, normal, tumor grade 1-3).
-Model: deeplabv3_resnet101
-Loss: CrossEntropyLoss"
-Metric: Mean IoU
-Available augmentations: "SquareSymmetry", "ColorJitter", "RandomToneCurve", "RandomBrightnessContrast", "RandomGamma", "ChannelDropout", "ToGray"
+Model: ResNet50
+Loss: CrossEntropyLoss and Dice Loss
+Metrics: IoU, Accuracy, Precision, Recall, F1 Score
+Your task is to improve the overall metrics in each step. You should be careful about the dataset and the model when arranging augmentations.
+Some available augmentations: "A.SquareSymmetry", "A.ColorJitter", "A.RandomToneCurve", "A.RandomBrightnessContrast", "A.RandomGamma", "A.ChannelDropout", "A.ToGray"
 
-Please suggest an initial Albumentations pipeline as a Python list of transforms, respecting available augmentations.
-Strict format:
-[A.SquareSymmetry(p=0.5),
-A.ColorJitter(p=0.5),
-A.RandomToneCurve(p=0.5),
-A.RandomBrightnessContrast(p=0.5),
-A.RandomGamma(p=0.5),
-A.ChannelDropout(p=0.5),
-A.ToGray(p=0.25),
+Answer format:
+[A.SquareSymmetry(),
+A.ColorJitter(),
+A.RandomToneCurve(),
+A.RandomBrightnessContrast(),
+A.RandomGamma(),
+A.ChannelDropout(),
+A.ToGray(),
 A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
 ToTensorV2()
 ]
+
+Suggest an initial augmentation policy as a Python list of Albumentations transforms. You can omit augmentations (except A.Normalize and A.ToTensorV2).
+
 Your response must follow these strict rules:
-- Output only a valid Python list of transforms
+- Output only a valid Python list of Albumentations transforms
 - Do not wrap the result in markdown (no triple backticks)
 - Do not explain or comment
 - Do not change the format
-- Do not change the last two transforms (normalize and tensor)
+- Do not change the last two transforms (A.Normalize and A.ToTensorV2)
 
 The response must begin with `[` and end with `]`.
-
 """
     response = client.chat.completions.create(
-        model="gpt-4.1-mini-2025-04-14",
+        model="gpt-4.1-2025-04-14",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7
     )
@@ -45,13 +46,16 @@ The response must begin with `[` and end with `]`.
 
 def query_gpt_update(iou_history, accuracy_history, 
                                         precision_history, recall_history, 
-                                        f1_history, current_augs,prev_augs):
+                                        f1_history, current_augs,prev_augs, error_history):
     prompt = f"""
-You are optimizing data augmentation for a segmentation model.
-
-## Dataset Info:
-- Histopathological patches of size 224x224 px
-- 5 segmentation classes: Background (0), Tumor Grade 1 (1), Tumor Grade 2 (2), Tumor Grade 3 (3), Normal Mucosa (4)
+You are an expert in data augmentation for deep learning. Remember the following details about your task.
+Dataset: High-resolution histopathological dataset providing detailed pixel-wise segmentation masks for five distinct classes: Grade-1 (well-differentiated), Grade-2 (moderately differentiated), Grade-3 (poorly differentiated) tumors, and Normal Mucosa. Regions not classified under these categories were labeled as "Others," including non-cancerous areas like glass plates and stroma.
+Images: histopathological RGB, sliced into 224x224 patches during training.
+Annotations: PNG masks with 5 classes (background, normal, tumor grade 1-3).
+Model: ResNet50
+Loss: CrossEntropyLoss and Dice Loss
+Metrics: IoU, Accuracy, Precision, Recall, F1 Score
+Your task is to improve the overall metrics in each step. You should be careful about the dataset and the model when arranging augmentations.
 
 Validation IoU history: {iou_history}
 Validation accuracy history: {accuracy_history}
@@ -60,31 +64,21 @@ Validation recall history: {recall_history}
 Validation F1 Score history: {f1_history}
 Current augmentation pipeline (Albumentations): {current_augs}
 Previous augmentation histories: {prev_augs}
+Update error history: {error_history}
 
-Suggest an improved augmentation policy as a Python list of Albumentations transforms, respecting available augmentations.
-Strict format:
-[A.SquareSymmetry(p=0.5),
-A.ColorJitter(p=0.5),
-A.RandomToneCurve(p=0.5),
-A.RandomBrightnessContrast(p=0.5),
-A.RandomGamma(p=0.5),
-A.ChannelDropout(p=0.5),
-A.ToGray(p=0.25),
-A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-ToTensorV2()
-]
+Suggest an improved augmentation policy as a Python list of Albumentations transforms. You can omit augmentations (except A.Normalize and A.ToTensorV2).
+
 Your response must follow these strict rules:
-- Output only a valid Python list of transforms
+- Output only a valid Python list of Albumentations transforms
 - Do not wrap the result in markdown (no triple backticks)
 - Do not explain or comment
 - Do not change the format
-- Do not change the last two transforms (normalize and tensor)
+- Do not change the last two transforms (A.Normalize and A.ToTensorV2)
 
 The response must begin with `[` and end with `]`.
-
 """
     response = client.chat.completions.create(
-        model="gpt-4.1-mini-2025-04-14",
+        model="gpt-4.1-2025-04-14",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7
     )
