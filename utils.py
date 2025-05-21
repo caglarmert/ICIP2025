@@ -5,6 +5,8 @@ import zipfile
 from sklearn.metrics import precision_score, recall_score, f1_score, jaccard_score
 import cv2
 import os
+import torch.nn as nn
+import torch.nn.functional as F
 
 # Color to class mapping
 COLOR2LABEL = {
@@ -23,6 +25,57 @@ LABEL2COLOR = {
     4: [255, 32, 0],      # Normal Mucosa
 }
 
+class DiceLoss(nn.Module):
+    def __init__(self, smooth=1e-6):
+        super(DiceLoss, self).__init__()
+        self.smooth = smooth  # Prevents division by zero
+
+    def forward(self, inputs, targets):
+        # Inputs: (batch_size, num_classes, height, width) [logits]
+        # Targets: (batch_size, height, width) [class indices]
+
+        # Convert targets to one-hot encoding
+        num_classes = inputs.shape[1]
+        targets_onehot = F.one_hot(targets, num_classes).permute(0, 3, 1, 2).float()  # (B, C, H, W)
+
+        # Apply softmax to logits
+        probs = F.softmax(inputs, dim=1)
+
+        # Compute intersection and union
+        intersection = torch.sum(probs * targets_onehot, dim=(2, 3))  # (B, C)
+        union = torch.sum(probs + targets_onehot, dim=(2, 3))        # (B, C)
+
+        # Dice coefficient per class
+        dice = (2. * intersection + self.smooth) / (union + self.smooth)  # (B, C)
+
+        # Average across classes and batches
+        loss = 1 - dice.mean()
+        return loss
+        
+class DiceCELoss(nn.Module):
+    def __init__(self, smooth=1e-6, ce_weight=1.0, dice_weight=1.0):
+        super(DiceCELoss, self).__init__()
+        self.smooth = smooth
+        self.ce_weight = ce_weight
+        self.dice_weight = dice_weight
+
+    def forward(self, inputs, targets):
+        # Cross-Entropy Loss
+        ce_loss = F.cross_entropy(inputs, targets)
+
+        # Dice Loss
+        num_classes = inputs.shape[1]
+        targets_onehot = F.one_hot(targets, num_classes).permute(0, 3, 1, 2).float()
+        probs = F.softmax(inputs, dim=1)
+        intersection = torch.sum(probs * targets_onehot, dim=(2, 3))
+        union = torch.sum(probs + targets_onehot, dim=(2, 3))
+        dice_loss = 1 - (2. * intersection + self.smooth) / (union + self.smooth)
+        dice_loss = dice_loss.mean()
+
+        # Combined Loss
+        total_loss = self.ce_weight * ce_loss + self.dice_weight * dice_loss
+        return total_loss
+
 def evaluate(model, loader, num_classes=5):
     model.eval()
     all_preds = []
@@ -33,7 +86,7 @@ def evaluate(model, loader, num_classes=5):
     with torch.no_grad():
         for imgs, masks in loader:
             imgs, masks = imgs.cuda(), masks.cuda()
-            outputs = model(imgs)['out']
+            outputs = model(imgs) #['out']
             preds = torch.argmax(outputs, dim=1)
 
             # Flatten predictions and masks
