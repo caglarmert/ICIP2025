@@ -18,6 +18,8 @@ import torch.nn.functional as F
 
 NUM_CLASSES = len(COLOR2LABEL)
 
+# wandb.login()
+
 def train_epoch(model, loader, optimizer, criterion, clip_value=1.0):
     model.train()
     total_loss = 0
@@ -37,6 +39,7 @@ def train_epoch(model, loader, optimizer, criterion, clip_value=1.0):
 Adaptive_Augmentation = True
 train_transform = A.Compose([
     A.SquareSymmetry(p=1),
+    A.PlanckianJitter(p=1),
     A.RandomToneCurve(p=0.5),
     A.RandomBrightnessContrast(p=0.5),
     A.ChannelDropout(p=0.1),
@@ -49,26 +52,26 @@ val_transform = A.Compose([
 ])
 
 epochs = 100
-batch_size = 32
+batch_size = 200
 patch_size = 224
 stride = 56
-patience = 5
+patience = 3
 best_iou = 0.0
 counter = 0
 save_best_model = False
-loss_criterion = "Lovasz"
+loss_criterion = "Tversky"
 ARCH = "Segformer"
 OPTIMIZER = "AdamW"
 ES = "ES"
 AUGMENTATION = "Aug"
-ENCODER="efficientnet-b7"
-ENCODER_WEIGHTS="advprop"
+ENCODER = "mit_b5"
+ENCODER_WEIGHTS = "imagenet"
 
 train_ds = SegmentationDataset('dataset/images/train', 'dataset/annotations/train', train_transform, patch_size, stride)
 val_ds = SegmentationDataset('dataset/images/validation', 'dataset/annotations/validation', val_transform, patch_size, stride)
 
-train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=4)
-val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=4)
+train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=8)
+val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=8)
 
 # Model
 model = smp.Segformer(
@@ -103,7 +106,7 @@ if OPTIMIZER == "AdamW":
 elif OPTIMIZER == "adam":
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=2, factor=0.1)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=3, factor=0.1)
 
 wandb.init(project="ICIP2025", entity="caglarmert", config={
     "learning_rate": optimizer.param_groups[0]['lr'],
