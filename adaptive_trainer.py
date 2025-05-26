@@ -18,7 +18,7 @@ import torch.nn.functional as F
 
 NUM_CLASSES = len(COLOR2LABEL)
 
-# wandb.login()
+wandb.login(key = "KEY")
 
 def train_epoch(model, loader, optimizer, criterion, clip_value=1.0):
     model.train()
@@ -39,7 +39,7 @@ def train_epoch(model, loader, optimizer, criterion, clip_value=1.0):
 Adaptive_Augmentation = True
 train_transform = A.Compose([
     A.SquareSymmetry(p=1),
-    A.PlanckianJitter(p=1),
+    A.PlanckianJitter(p=0.5),
     A.RandomToneCurve(p=0.5),
     A.RandomBrightnessContrast(p=0.5),
     A.ChannelDropout(p=0.1),
@@ -52,29 +52,36 @@ val_transform = A.Compose([
 ])
 
 epochs = 100
-batch_size = 200
+batch_size = 64
 patch_size = 224
-stride = 56
-patience = 3
+stride = 224
+patience = 10
 best_iou = 0.0
 counter = 0
 save_best_model = False
-loss_criterion = "Tversky"
-ARCH = "Segformer"
+loss_criterion = "Dice"
+DOWNSCALE = "60"
+ARCH = "DPT"
 OPTIMIZER = "AdamW"
 ES = "ES"
 AUGMENTATION = "Aug"
-ENCODER = "mit_b5"
-ENCODER_WEIGHTS = "imagenet"
+ENCODER="tu-maxvit_large_tf_224.in21k"
+ENCODER_WEIGHTS="in21k"
 
-train_ds = SegmentationDataset('dataset/images/train', 'dataset/annotations/train', train_transform, patch_size, stride)
-val_ds = SegmentationDataset('dataset/images/validation', 'dataset/annotations/validation', val_transform, patch_size, stride)
+if DOWNSCALE == "60":
+    data_path = "dataset"
+else:
+    data_path = DOWNSCALE
+
+
+train_ds = SegmentationDataset(f"{data_path}/images/train", f"{data_path}/annotations/train", train_transform, patch_size, stride)
+val_ds = SegmentationDataset(f"{data_path}/images/validation", f"{data_path}/annotations/validation", val_transform, patch_size, stride)
 
 train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=8)
 val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=8)
 
 # Model
-model = smp.Segformer(
+model = smp.DPT(
     encoder_name=ENCODER,
     encoder_weights=ENCODER_WEIGHTS,
     in_channels=3,
@@ -93,7 +100,7 @@ elif loss_criterion == "Focal":
 elif loss_criterion == "Jaccard":
     criterion = JaccardLoss(mode = "multiclass")
 elif loss_criterion == "Tversky":
-    criterion = TverskyLoss(mode = "multiclass",  alpha=0.6, beta=0.4,)
+    criterion = TverskyLoss(mode = "multiclass",  alpha=0.4, beta=0.6,)
 elif loss_criterion == "Lovasz":
     criterion = LovaszLoss(mode = "multiclass")
 elif loss_criterion == "SCE":
@@ -103,14 +110,16 @@ else:
     
 if OPTIMIZER == "AdamW":
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
-elif OPTIMIZER == "adam":
+elif OPTIMIZER == "Adam":
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+elif OPTIMIZER == "SGD":
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=3, factor=0.1)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.1)
 
 wandb.init(project="ICIP2025", entity="caglarmert", config={
     "learning_rate": optimizer.param_groups[0]['lr'],
-    "dataset": "downscaled",
+    "dataset": DOWNSCALE,
     "epochs": epochs,
     "patch_size": patch_size,
     "stride": stride,
@@ -126,7 +135,7 @@ wandb.init(project="ICIP2025", entity="caglarmert", config={
     "Adaptive_Augmentation": Adaptive_Augmentation
 })
 
-model_name = f"{ARCH}_{OPTIMIZER}_{loss_criterion}_{ENCODER}"
+model_name = f"{DOWNSCALE}_{ARCH}_{OPTIMIZER}_{loss_criterion}_{ENCODER}"
 train_ds.transform = train_transform
 
 iou_history = []
@@ -136,7 +145,7 @@ recall_history = []
 f1_history = []
 prev_augs_str = []
 error_history = []
-update_interval = 1
+update_interval = 3
 
 
 for epoch in range(epochs):
@@ -144,11 +153,12 @@ for epoch in range(epochs):
     metrics = evaluate(model, val_loader)
     val_iou = metrics["iou"]
     scheduler.step(val_iou)
-    iou_history.append(metrics["iou"])
-    accuracy_history.append(metrics["accuracy"])
-    precision_history.append(metrics["precision"])
-    recall_history.append(metrics["recall"])
-    f1_history.append(metrics["f1"])
+    if (epoch) % update_interval == 0:
+        iou_history.append(metrics["iou"])
+        accuracy_history.append(metrics["accuracy"])
+        precision_history.append(metrics["precision"])
+        recall_history.append(metrics["recall"])
+        f1_history.append(metrics["f1"])
     print(f"Validation IoU = {val_iou:.4f}")
 
     wandb.log({
@@ -158,7 +168,12 @@ for epoch in range(epochs):
         "precision" : metrics["precision"],
         "recall" : metrics["recall"],
         "f1" : metrics["f1"],
-        "lr": optimizer.param_groups[0]['lr']
+        "lr": optimizer.param_groups[0]['lr'],
+        "Othr_IoU": metrics["iou_per_class"][0],
+        "T-G1_IoU": metrics["iou_per_class"][1],
+        "T-G2_IoU": metrics["iou_per_class"][2],
+        "T-G3_IoU": metrics["iou_per_class"][3],
+        "N_Mu_IoU": metrics["iou_per_class"][4]
     })
     
     if val_iou > best_iou:
@@ -178,10 +193,10 @@ for epoch in range(epochs):
                     wandb.log_artifact(artifact)
                 break
     if Adaptive_Augmentation:
-        if (epoch + 1) % update_interval == 0:
+        if (epoch) % update_interval == 0:
             current_aug_str = str(train_transform)
             new_aug_code = query_gpt_update(iou_history, accuracy_history, precision_history, recall_history,
-                                            f1_history, current_aug_str, prev_augs_str, error_history)
+                                            f1_history, current_aug_str, prev_augs_str, error_history, ARCH, loss_criterion, ENCODER)                                            
             prev_augs_str.append(current_aug_str)
             print("GPT Updated Augmentations:\n", new_aug_code)
             try:
@@ -201,11 +216,11 @@ model.load_state_dict(torch.load(f"best_{model_name}.pth"))
 model.eval()
 
 # Inference dataset with patch slicing
-inference_ds = SegmentationDataset('dataset/images/test', mask_dir=None, transform=val_transform, inference_mode=True, patch_size=patch_size, stride=stride)
-inference_loader = DataLoader(inference_ds, batch_size=1, shuffle=False)
+inference_ds = SegmentationDataset(f"{data_path}/images/test", mask_dir=None, transform=val_transform, inference_mode=True, patch_size=patch_size, stride=stride)
+inference_loader = DataLoader(inference_ds, batch_size=1, shuffle=False, num_workers=1)
 
 # Get dimensions of all test images
-image_shapes = {i: cv2.imread(os.path.join('dataset/images/test', img)).shape[:2] for i, img in enumerate(inference_ds.images)}
+image_shapes = {i: cv2.imread(os.path.join(f"{data_path}/images/test", img)).shape[:2] for i, img in enumerate(inference_ds.images)}
 final_probs = {i: np.zeros((NUM_CLASSES, h, w), dtype=np.float32) for i, (h, w) in image_shapes.items()}
 vote_mask = {i: np.zeros((h, w), dtype=np.int32) for i, (h, w) in image_shapes.items()}
 
@@ -227,9 +242,38 @@ for img_idx in final_probs:
     filename = inference_ds.images[img_idx]
     cv2.imwrite(os.path.join(model_name, filename), rgb_mask)
 
-# Example usage:
-folder_to_zip = model_name
-zip_filename = f'{model_name}.zip'
+if DOWNSCALE != "60":
+    # Set paths
+    reference_folder = "dataset/images/test"
+    source_folder = model_name
+    target_folder = f"resized_{model_name}"
+    
+    # Create target folder if it doesn't exist
+    os.makedirs(target_folder, exist_ok=True)
+    
+    image_size_map = {}
+    for filename in os.listdir(reference_folder):
+        if filename.lower().endswith(".png"):
+            ref_path = os.path.join(reference_folder, filename)
+            with Image.open(ref_path) as img:
+                image_size_map[filename] = img.size  # (width, height)
+    
+    for filename in os.listdir(source_folder):
+        if filename.lower().endswith(".png") and filename in image_size_map:
+            src_path = os.path.join(source_folder, filename)
+            with Image.open(src_path) as img:
+                target_size = image_size_map[filename]
+                resized_img = img.resize(target_size, resample=Image.NEAREST)
+                target_path = os.path.join(target_folder, filename)
+                resized_img.save(target_path)
+    
+    print("All matching images resized and saved to:", target_folder)
+    folder_to_zip = target_folder
+    
+else:    
+    folder_to_zip = model_name
+    
+zip_filename = f"{model_name}.zip"
 
 # Zip the folder
 zip_folder(folder_to_zip, zip_filename)

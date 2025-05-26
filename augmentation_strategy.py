@@ -1,5 +1,5 @@
 from openai import OpenAI
-client = OpenAI(api_key="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")
+client = OpenAI(api_key="KEY")
 
 def query_gpt_initial():
     prompt = f"""
@@ -7,7 +7,8 @@ You are an expert in data augmentation for deep learning. Remember the following
 Dataset: High-resolution histopathological dataset providing detailed pixel-wise segmentation masks for five distinct classes: Grade-1 (well-differentiated), Grade-2 (moderately differentiated), Grade-3 (poorly differentiated) tumors, and Normal Mucosa. Regions not classified under these categories were labeled as "Others," including non-cancerous areas like glass plates and stroma.
 Images: histopathological RGB, sliced into 224x224 patches during training.
 Annotations: PNG masks with 5 classes (background, normal, tumor grade 1-3).
-Model: ResNet50
+Model: Dense Prediction Transformers (DPT)
+Encoder: tu-maxvit_large_tf_224.in21k 
 Loss: CrossEntropyLoss and Dice Loss
 Metrics: IoU, Accuracy, Precision, Recall, F1 Score
 Your task is to improve the overall metrics in each step. You should be careful about the dataset and the model when arranging augmentations.
@@ -46,16 +47,17 @@ The response must begin with `[` and end with `]`.
 
 def query_gpt_update(iou_history, accuracy_history, 
                                         precision_history, recall_history, 
-                                        f1_history, current_augs,prev_augs, error_history):
+                                        f1_history, current_augs,prev_augs, error_history, model, loss, encoder):
     prompt = f"""
 You are an expert in data augmentation for deep learning. Remember the following details about your task.
 Dataset: High-resolution histopathological dataset providing detailed pixel-wise segmentation masks for five distinct classes: Grade-1 (well-differentiated), Grade-2 (moderately differentiated), Grade-3 (poorly differentiated) tumors, and Normal Mucosa. Regions not classified under these categories were labeled as "Others," including non-cancerous areas like glass plates and stroma.
 Images: histopathological RGB, sliced into 224x224 patches during training.
 Annotations: PNG masks with 5 classes (background, normal, tumor grade 1-3).
-Model: ResNet50
-Loss: CrossEntropyLoss and Dice Loss
+Model Architecture: {model}
+Loss: {loss}
+Encoder: {encoder}
 Metrics: IoU, Accuracy, Precision, Recall, F1 Score
-Your task is to improve the overall metrics in each step. You should be careful about the dataset and the model when arranging augmentations.
+Your task is to improve the overall metrics in each step. You should be careful about the dataset and the model architecture when arranging augmentations.
 
 Validation IoU history: {iou_history}
 Validation accuracy history: {accuracy_history}

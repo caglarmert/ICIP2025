@@ -102,6 +102,13 @@ def evaluate(model, loader, num_classes=5):
     # Accuracy
     acc = total_correct / total_pixels
 
+    # Per-class metrics
+    iou_per_class = jaccard_score(y_true, y_pred, average=None, labels=list(range(num_classes)))
+    precision_per_class = precision_score(y_true, y_pred, average=None, zero_division=0, labels=list(range(num_classes)))
+    recall_per_class = recall_score(y_true, y_pred, average=None, zero_division=0, labels=list(range(num_classes)))
+    f1_per_class = f1_score(y_true, y_pred, average=None, zero_division=0, labels=list(range(num_classes)))
+
+
     # Per-class & macro metrics
     iou = jaccard_score(y_true, y_pred, average='macro', labels=list(range(num_classes)))
     precision = precision_score(y_true, y_pred, average='macro', zero_division=0)
@@ -114,12 +121,24 @@ def evaluate(model, loader, num_classes=5):
     print(f"Recall: {recall:.4f}")
     print(f"F1 Score: {f1:.4f}")
 
+    print("Per-class metrics:")
+    for i in range(num_classes):
+        print(f"Class {i}: IoU={iou_per_class[i]:.4f}, "
+              f"Precision={precision_per_class[i]:.4f}, "
+              f"Recall={recall_per_class[i]:.4f}, "
+              f"F1={f1_per_class[i]:.4f}")
+
+
     return {
         "accuracy": acc,
         "iou": iou,
         "precision": precision,
         "recall": recall,
-        "f1": f1
+        "f1": f1,
+        "iou_per_class": iou_per_class,
+        "precision_per_class": precision_per_class,
+        "recall_per_class": recall_per_class,
+        "f1_per_class": f1_per_class
     }
 
 class SegmentationDataset(Dataset):
