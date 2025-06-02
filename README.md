@@ -2,6 +2,13 @@
 
 Whole Slide Image Downscaling
 
+Use the ICIP2025 Grand Challenge dataset with Images and Geojson to obtain the downscaled images with 20x and 40x downscaling. These datasets will be identical to the provided 60x downscaled set.
+
+use dsconvert.py, check the folder paths inside the script.
+
+To process the WSI images in .svs format, I've used patches (default 2048) and processed whole images patch by patch, downscaling each patch with a scale factor. Each corresponding mask is obtained with the challenge dataset's geojson files.
+
+
 Downscale, Architecture, Patch Size, Stride, Encoder, Loss Function
 60x, DPT, 224, 56, maxvit_large_tf_224, Dice
 40x, DPT, 512, 64, maxvit_large_tf_512, Jaccard
