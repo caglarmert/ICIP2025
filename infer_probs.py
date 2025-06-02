@@ -14,17 +14,20 @@ from utils import DiceLoss, DiceCELoss
 from tqdm import tqdm
 import zipfile
 import torch.nn.functional as F
+
 # Color to class mapping
 NUM_CLASSES = len(COLOR2LABEL)
 
 val_transform = A.Compose([
+    #A.CLAHE(p=1.0), 
     A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
     ToTensorV2()
+    # some models use CLAHE by default for validation as well! be careful with this parameter here!
 ])
 
 patch_size = 512
-stride = 128
-DOWNSCALE = "20"
+stride = 64
+DOWNSCALE = "20" #Dataset downscale versions
 ENCODER="tu-maxvit_large_tf_512.in21k_ft_in1k"
 ENCODER_WEIGHTS="in21k_ft_in1k"
 
@@ -36,16 +39,17 @@ else:
 # Model
 model = smp.DPT(
     encoder_name=ENCODER,
+    decoder_readout="ignore",
     encoder_weights=ENCODER_WEIGHTS,
     in_channels=3,
     classes=NUM_CLASSES,
 )
-
+model = torch.nn.DataParallel(model)
 model = model.cuda()
 
 # Create output folder
-model_name = "6739best_20_DPT_AdamW_Dice_tu-maxvit_large_tf_512.in21k_ft_in1k"
-os.makedirs(f"probs_{model_name}", exist_ok=True)
+model_name = "best2_20_DPT_AdamW_Tversky_tu-maxvit_large_tf_512.in21k_ft_in1k"
+os.makedirs(f"probs8_{model_name}", exist_ok=True)
 
 # Load model for inference
 model.load_state_dict(torch.load(f"{model_name}.pth"))
@@ -74,15 +78,15 @@ with torch.no_grad():
 for img_idx in final_probs:
     averaged_probs = final_probs[img_idx] / np.maximum(vote_mask[img_idx], 1e-5)
     filename = os.path.splitext(inference_ds.images[img_idx])[0]  # remove .png
-    out_path = os.path.join(f"probs_{model_name}", f"{filename}.npy")
+    out_path = os.path.join(f"probs8_{model_name}", f"{filename}.npy")
     np.save(out_path, averaged_probs)
 
 if DOWNSCALE != "60":
     from PIL import Image
     # Set paths
     reference_folder = "dataset/images/test"
-    source_folder = f"probs_{model_name}"
-    target_folder = f"resized_probs_{model_name}"
+    source_folder = f"probs8_{model_name}"
+    target_folder = f"resized_probs8_{model_name}"
     
     # Create target folder if it doesn't exist
     os.makedirs(target_folder, exist_ok=True)
@@ -108,8 +112,8 @@ if DOWNSCALE != "60":
 
     # Set paths
     reference_folder = "dataset/images/test"
-    source_folder = f"probs_{model_name}"
-    target_folder = f"resized_probs_{model_name}"
+    source_folder = f"probs8_{model_name}"
+    target_folder = f"resized_probs8_{model_name}"
     
     # Create target folder if it doesn't exist
     os.makedirs(target_folder, exist_ok=True)
@@ -143,9 +147,9 @@ if DOWNSCALE != "60":
             # Save resized probs
             np.save(os.path.join(target_folder, filename), resized)
 else:    
-    folder_to_zip = f"probs_{model_name}"
+    folder_to_zip = f"probs8_{model_name}"
     
-zip_filename = f"probs_{model_name}.zip"
+zip_filename = f"probs8_{model_name}.zip"
 
 # Zip the folder
 zip_folder(folder_to_zip, zip_filename)
