@@ -4,20 +4,26 @@ from tqdm import tqdm
 import torch
 import torch.nn.functional as F
 import cv2
-from utils import decode_segmap  # Assumes your label-to-color mapping is defined here
+from utils import decode_segmap 
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.colors import ListedColormap
 
-# === CONFIGURATION ===
 model_folders = [
-    "resized_probs_6682best_40_DPT_AdamW_Jaccard_tu-maxvit_large_tf_512.in21k_ft_in1k",
+    "resized_probs8_6682best_40_DPT_AdamW_Jaccard_tu-maxvit_large_tf_512.in21k_ft_in1k",
     "probs_67best_DPT_AdamW_Dice_tu-maxvit_large_tf_224.in21k",
-    "resized_probs_6739best_20_DPT_AdamW_Dice_tu-maxvit_large_tf_512.in21k_ft_in1k"
+    "resized_probs8_6739best_20_DPT_AdamW_Dice_tu-maxvit_large_tf_512.in21k_ft_in1k",
+    "resized_probs8_best2_20_DPT_AdamW_Tversky_tu-maxvit_large_tf_512.in21k_ft_in1k"
     # Add as many as you have
 ]
 top_n = 3  # Set your Top-N value
-output_prob_folder = f"top{top_n}_voted_probs"
-output_mask_folder = f"top{top_n}_voted_masks"
+n_model = len(model_folders)
+output_prob_folder = f"gauss_blur_favor_bias_top{top_n}_{n_model}models_morph_probs"
+output_mask_folder = f"gauss_blur_favor_bias_top{top_n}_{n_model}models_morph_masks"
+output_filtered_mask_folder = f"gauss_blur_favor_bias_top{top_n}_{n_model}models_morph_filtered_masks"
 os.makedirs(output_prob_folder, exist_ok=True)
 os.makedirs(output_mask_folder, exist_ok=True)
+os.makedirs(output_filtered_mask_folder, exist_ok=True)
 
 # === Get list of filenames from the first model folder ===
 filenames = sorted([f for f in os.listdir(model_folders[0]) if f.endswith(".npy")])
@@ -54,30 +60,53 @@ for fname in tqdm(filenames, desc=f"Top-{top_n} Voting"):
     # === Save soft averaged probs ===
     np.save(os.path.join(output_prob_folder, fname), averaged_probs)
 
-    # === Convert to argmax mask ===
-    mask = np.argmax(averaged_probs, axis=0).astype(np.uint8)
+    # Custom weights for each class
+    class_weights = np.array([0.8, 1.5, 2.0, 1.8, 1.7], dtype=np.float32)
+    # === Optional: Smooth the averaged probability maps ===
+    smoothed_probs = np.zeros_like(averaged_probs)
+    for c in range(C):
+        smoothed_probs[c] = cv2.GaussianBlur(averaged_probs[c], ksize=(5, 5), sigmaX=2)
+    biased_probs = smoothed_probs * class_weights[:, None, None]    
+    # Use averaged_probs instead of smoothed_probs for non-smoothened version
+    
+    # === Convert to argmax mask with bias applied ===
+    mask = np.argmax(biased_probs, axis=0).astype(np.uint8)
     rgb_mask = decode_segmap(mask)  # Convert to color if needed
     filename_png = fname.replace(".npy", ".png")
     cv2.imwrite(os.path.join(output_mask_folder, filename_png), rgb_mask)
+
+    # === Post-process with morphological filtering ===
+    cleaned_mask = np.zeros_like(mask)
+    
+    for cls in range(1, C):  # Skip background (0)
+        binary_mask = (mask == cls).astype(np.uint8)
+    
+        # Morphological closing to fill small holes
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (10, 10))
+        closed_mask = cv2.morphologyEx(binary_mask, cv2.MORPH_CLOSE, kernel)
+    
+        # Remove small connected components (area < threshold)
+        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(closed_mask, connectivity=8)
+        min_area = 100  # You can tune this value depending on your image size
+    
+        for i in range(1, num_labels):  # Skip background label 0
+            if stats[i, cv2.CC_STAT_AREA] >= min_area:
+                cleaned_mask[labels == i] = cls
+
+    rgb_mask = decode_segmap(cleaned_mask)  # Convert to color if needed
+    filename_png = fname.replace(".npy", ".png")
+    cv2.imwrite(os.path.join(output_filtered_mask_folder, filename_png), rgb_mask)
+
 
 print(f"\n Top-{top_n} soft voting complete.")
 print("Saved averaged probabilities to:", output_prob_folder)
 print("Saved segmentation masks to:", output_mask_folder)
 
 
-## VISUALS
-
-import os
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from tqdm import tqdm
-from matplotlib.colors import ListedColormap
-
 # === CONFIGURATION ===
-probs_folder = "top3_voted_probs"
+probs_folder = output_prob_folder
 test_images_folder = "dataset/images/test"
-image_mask_folder = "top3_voted_masks"
+image_mask_folder = output_mask_folder
 output_overlay_folder = f"{probs_folder}_overlays"
 os.makedirs(output_overlay_folder, exist_ok=True)
 
@@ -107,12 +136,6 @@ def create_complete_visualization(original_img_path, prob_matrix, mask_path, out
     mask_img = plt.imread(mask_path) if os.path.exists(mask_path) else None
     
     plt.figure(figsize=(18, 10))
-    
-    # # 1. Original Image
-    # plt.subplot(2, 3, 1)
-    # plt.imshow(original_img)
-    # plt.title("Original Image")
-    # plt.axis('off')
     
     # 2-6. Class Overlays
     for cls_idx in range(NUM_CLASSES):
