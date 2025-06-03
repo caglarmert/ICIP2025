@@ -1,8 +1,10 @@
-# ICIP2025: Histopathology Colecteral Cancer Semantic Segmentation Models and Whole Slide Image Downscaling
+---
 
-This repository provides tools for downscaling Whole Slide Images (WSIs) and training segmentation models on the **ICIP2025 Grand Challenge dataset**, which includes WSI `.svs` images and corresponding `GeoJSON` annotation files.
+# ICIP 2025: Semantic Segmentation Models and WSI Downscaling for Colorectal Cancer Histopathology
 
-We generate downscaled datasets at **20x** and **40x** magnifications that match the structure and format of the provided **60x** dataset. All processing is done patch-by-patch using a configurable downscaling pipeline.
+This repository contains tools for **downscaling Whole Slide Images (WSIs)** and **training semantic segmentation models** on the **ICIP2025 Grand Challenge dataset**, which includes `.svs` WSIs and their corresponding `GeoJSON` annotations.
+
+We generate additional datasets at **40x** and **20x** magnifications to match the structure and format of the original **60x** dataset. The entire pipeline processes WSIs **patch-by-patch**, allowing flexible and scalable handling of large images.
 
 ---
 
@@ -10,62 +12,116 @@ We generate downscaled datasets at **20x** and **40x** magnifications that match
 
 To downscale WSIs:
 
-1. Use the script `dsconvert.py`.
-2. Ensure that folder paths in the script are correctly set to match your local dataset structure.
-3. WSIs are split into patches (default: `2048x2048`) and each patch is downscaled individually using the specified scale factor.
-4. Corresponding segmentation masks are generated from `GeoJSON` annotations provided in the challenge dataset.
-5. Downscaled dataset patches are combined after scaling to obtain single `.PNG` lossless compressed image and mask pairs.
+1. Run the `dsconvert.py` script.
+2. Update folder paths in the script to match your local directory structure.
+3. WSIs are split into patches (default: `2048x2048`), and each patch is individually downscaled based on a specified scale factor.
+4. Segmentation masks are generated from `GeoJSON` annotations provided with the dataset.
+5. Downscaled patches are reassembled into `.PNG` images and masks using lossless compression.
+
+---
+
+## 📁 Folder Structure
+
+The expected folder structure is as follows:
+
+```
+ICIP2025/
+├── geojson/
+├── images/
+├── dataset/
+│   ├── images/
+│   │   ├── train/
+│   │   ├── test/
+│   │   └── validation/
+│   └── annotations/
+│       ├── train/
+│       └── validation/
+```
+
 ---
 
 ## 🐳 Docker Support
 
-A ready-to-use Docker image is available on Docker Hub:
+A prebuilt Docker image is available:
 
 ```bash
 docker pull mertcaglar/segm
 ```
 
-Run the container with GPU support and mount the current directory:
+To run the container with GPU support and mount the current working directory:
 
 ```bash
 docker run --gpus all -it -v $(pwd):/host -w /host mertcaglar/segm
 ```
 
-This will launch the container and execute the main training script: `adaptive_trainer.py`.
+This will launch the container and run the `adaptive_trainer.py` script.
 
 ---
 
-## 🧪 Experiment Configurations
+## 🧪 Experimentation & Training
 
-### Adaptive Augmentation
+### 🧬 Adaptive Data Augmentation
 
-All of the experiments use adaptive data augmentation policy optimization method. The adaptive augmentation requires an OpenAI supscription and API key. Use the `augmentation_strategy.py` script to provide the API key and tune the prompt. The response will be executed inside the `adaptive_trainer.py` as a list of data augmentations described in the Albumentations library.
+All training experiments use **adaptive data augmentation**, optimized via the OpenAI API.
+To use this feature:
 
-
-### Model training configurations
-
-| Downscale | Architecture | Patch Size | Stride | Encoder                | Loss Function |
-| --------- | ------------ | ---------- | ------ | ---------------------- | ------------- |
-| 60x       | DPT          | 224        | 56     | `maxvit_large_tf_224`  | Dice          |
-| 40x       | DPT          | 512        | 64     | `maxvit_large_tf_512`  | Jaccard       |
-| 20x       | DPT          | 512        | 256    | `maxvit_large_tf_512`  | Dice          |
-| 20x       | DPT          | 512        | 256    | `maxvit_xlarge_tf_512` | Tversky       |
-| 20x       | DPT          | 512        | 256    | `maxvit_large_tf_512`  | Lovasz        |
-
-### Probability Matrix Inference
-
-Best results were obtained with training these models with given configurations. After obtaining these models, we've obtained the probability matrices for all of the test images for each of the models. To obtain the probability matrices use the provided script `infer_probs.py`. Change the configuration inside the script according to your models.
-
-### Top-N Soft Biased Voting
-
-With probability matrices, we've applied top-n soft biased voting with the script `softvote_topN.py`. Use this script to generate final prediction masks, by ensembling the best performing models, such as the models obtained with the provided configurations.
+* Provide your API key in `augmentation_strategy.py`.
+* Adjust the prompt to define your augmentation policy.
+* `adaptive_trainer.py` will then apply the generated augmentations using the [**Albumentations**](https://albumentations.ai/) library ([Buslaev et al., 2020](https://arxiv.org/abs/1809.06839)).
 
 ---
 
-## 🧠 DPT Architecture
+### 🛠️ Training Configurations
 
-**DPT (Dense Prediction Transformer)** is a vision transformer-based architecture designed for dense prediction tasks such as semantic segmentation.
+| Downscale | Architecture | Patch Size | Stride | Encoder                                                                         | Loss Function |
+| --------- | ------------ | ---------- | ------ | ------------------------------------------------------------------------------- | ------------- |
+| 60x       | DPT          | 224        | 56     | [`maxvit_large_tf_224`](https://huggingface.co/timm/maxvit_large_tf_224.in1k)   | Dice          |
+| 40x       | DPT          | 512        | 64     | [`maxvit_large_tf_512`](https://huggingface.co/timm/maxvit_large_tf_512.in1k)   | Jaccard       |
+| 20x       | DPT          | 512        | 256    | [`maxvit_large_tf_512`](https://huggingface.co/timm/maxvit_large_tf_512.in1k)   | Dice          |
+| 20x       | DPT          | 512        | 256    | [`maxvit_xlarge_tf_512`](https://huggingface.co/timm/maxvit_xlarge_tf_512.in1k) | Tversky       |
+| 20x       | DPT          | 512        | 256    | [`maxvit_large_tf_512`](https://huggingface.co/timm/maxvit_large_tf_512.in1k)   | Lovasz        |
 
-* Instead of using convolutional backbones, DPT leverages a **transformer-based encoder** with a **global receptive field** at every stage.
-* Tokens from different transformer layers are reassembled into image-like representations and progressively decoded into high-resolution predictions via a **convolutional decoder**.
-* This allows for **fine-grained segmentation** and improved global consistency over traditional convolutional networks.
+> **Backbone citation**: MaxViT – Tu et al., *"MaxViT: Multi-Axis Vision Transformer"* ([arXiv:2204.01697](https://arxiv.org/abs/2204.01697))
+> Hugging Face models via [timm](https://huggingface.co/timm)
+
+---
+
+### 🔍 Probability Matrix Inference
+
+Once models are trained using the configurations above, generate probability maps for test images using:
+
+```bash
+infer_probs.py
+```
+
+Make sure to modify the script configuration to match your model and dataset settings.
+
+---
+
+### 🧮 Top-N Soft Biased Voting
+
+Use **Top-N Soft Biased Voting** to ensemble predictions across the best-performing models.
+To generate final masks from the probability matrices:
+
+```bash
+softvote_topN.py
+```
+
+This method improves accuracy by aggregating predictions from multiple models using soft-weighted voting.
+
+---
+
+## 🧠 DPT Architecture Overview
+
+**DPT (Dense Prediction Transformer)** is a vision transformer tailored for dense prediction tasks like semantic segmentation.
+
+* Replaces conventional convolutional backbones with a **transformer-based encoder**, enabling **global context** at every layer.
+* Intermediate transformer tokens are reconstructed into spatial feature maps and progressively **decoded via a convolutional decoder**.
+* Offers **fine-grained segmentation** and superior **global consistency** compared to CNN-based approaches.
+
+> **Citation**: Ranftl et al., *"Vision Transformers for Dense Prediction"*
+> [DPT Paper (arXiv:2103.13413)](https://arxiv.org/abs/2103.13413)
+> [Hugging Face Model Card](https://huggingface.co/Intel/dpt-large)
+
+---
+
