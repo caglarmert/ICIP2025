@@ -300,9 +300,9 @@ test_batch_process_all("images", "geojson", "40test_output", TILE_SIZE, 0.025)
 
 
 # Define paths
-train_folder = "ICIP2025/dataset/annotations/train"
-validation_folder = "ICIP2025/dataset/annotations/validation"
-mixed_repository = "ICIP2025/svs/20converted_output/masks"
+train_folder = "dataset/annotations/train"
+validation_folder = "dataset/annotations/validation"
+mixed_repository = "20converted_output/masks"
 train_10_folder = "20/annotations/train"
 validation_10_folder = "20/annotations/validation"
 
@@ -333,9 +333,9 @@ for file_name in validation_files:
 
 print("Files copied successfully.")
 
-train_folder = "ICIP2025/dataset/images/train"
-validation_folder = "ICIP2025/dataset/images/validation"
-mixed_repository = "ICIP2025/svs/20converted_output/images"
+train_folder = "dataset/images/train"
+validation_folder = "dataset/images/validation"
+mixed_repository = "20converted_output/images"
 train_10_folder = "20/images/train"
 validation_10_folder = "20/images/validation"
 
@@ -366,8 +366,8 @@ for file_name in validation_files:
 
 print("Files copied successfully.")
 
-source_folder = "ICIP2025/svs/20test_output/images"
-destination_folder = "ICIP2025/svs/20/images/test"
+source_folder = "20test_output/images"
+destination_folder = "20/images/test"
 
 # Ensure destination folder exists
 os.makedirs(destination_folder, exist_ok=True)
@@ -386,9 +386,9 @@ print("Folder contents copied successfully.")
 
 ################
 # Define paths
-train_folder = "ICIP2025/dataset/annotations/train"
-validation_folder = "ICIP2025/dataset/annotations/validation"
-mixed_repository = "ICIP2025/svs/40converted_output/masks"
+train_folder = "dataset/annotations/train"
+validation_folder = "dataset/annotations/validation"
+mixed_repository = "40converted_output/masks"
 train_10_folder = "40/annotations/train"
 validation_10_folder = "40/annotations/validation"
 
@@ -419,9 +419,9 @@ for file_name in validation_files:
 
 print("Files copied successfully.")
 
-train_folder = "ICIP2025/dataset/images/train"
-validation_folder = "ICIP2025/dataset/images/validation"
-mixed_repository = "ICIP2025/svs/40converted_output/images"
+train_folder = "dataset/images/train"
+validation_folder = "dataset/images/validation"
+mixed_repository = "40converted_output/images"
 train_10_folder = "40/images/train"
 validation_10_folder = "40/images/validation"
 
@@ -453,8 +453,8 @@ for file_name in validation_files:
 print("Files copied successfully.")
 
 
-source_folder = "ICIP2025/svs/40test_output/images"
-destination_folder = "ICIP2025/svs/40/images/test"
+source_folder = "40test_output/images"
+destination_folder = "40/images/test"
 
 # Ensure destination folder exists
 os.makedirs(destination_folder, exist_ok=True)
