@@ -78,7 +78,7 @@ To use this feature:
 | 60x       | DPT          | 224        | 56     | [`maxvit_large_tf_224`](https://huggingface.co/timm/maxvit_large_tf_224.in1k)   | Dice          |
 | 40x       | DPT          | 512        | 64     | [`maxvit_large_tf_512`](https://huggingface.co/timm/maxvit_large_tf_512.in1k)   | Jaccard       |
 | 20x       | DPT          | 512        | 256    | [`maxvit_large_tf_512`](https://huggingface.co/timm/maxvit_large_tf_512.in1k)   | Dice          |
-| 20x       | DPT          | 512        | 256    | [`maxvit_xlarge_tf_512`](https://huggingface.co/timm/maxvit_xlarge_tf_512.in1k) | Tversky       |
+| 20x       | DPT          | 512        | 256    | [`maxvit_xlarge_tf_512`](https://huggingface.co/timm/maxvit_xlarge_tf_512.in21k_ft_in1k) | Tversky       |
 | 20x       | DPT          | 512        | 256    | [`maxvit_large_tf_512`](https://huggingface.co/timm/maxvit_large_tf_512.in1k)   | Lovasz        |
 
 > **Backbone citation**: MaxViT – Tu et al., *"MaxViT: Multi-Axis Vision Transformer"* ([arXiv:2204.01697](https://arxiv.org/abs/2204.01697))
