@@ -2,7 +2,7 @@
 
 # Colorectal Cancer Segmentation with Adaptive Augmentation and Multi-Resolution Ensemble Models
 
-This repository contains tools for **downscaling Whole Slide Images (WSIs)** and **training semantic segmentation models** on the **ICIP2025 Grand Challenge dataset**, which includes `.svs` WSIs and their corresponding `GeoJSON` annotations.
+This repository contains tools for **downscaling Whole Slide Images (WSIs)** and **training semantic segmentation models** on the **ICIP2025 Grand Challenge** (Colorectal Cancer Tumor Grade Segmentation in Digital Histopathology Images), which includes `.svs` WSIs and their corresponding `GeoJSON` annotations.
 
 [The Challange Paper (arXiv:2507.04681)](https://arxiv.org/abs/2507.04681)
 
