@@ -1,8 +1,10 @@
 ---
 
-# ICIP 2025: Semantic Segmentation Models and WSI Downscaling for Colorectal Cancer Histopathology
+# Colorectal Cancer Segmentation with Adaptive Augmentation and Multi-Resolution Ensemble Models
 
 This repository contains tools for **downscaling Whole Slide Images (WSIs)** and **training semantic segmentation models** on the **ICIP2025 Grand Challenge dataset**, which includes `.svs` WSIs and their corresponding `GeoJSON` annotations.
+
+[The Challange Paper (arXiv:2507.04681)](https://arxiv.org/abs/2507.04681)
 
 We generate additional datasets at **40x** and **20x** magnifications to match the structure and format of the original **60x** dataset. The entire pipeline processes WSIs **patch-by-patch**, allowing flexible and scalable handling of large images.
 
@@ -81,7 +83,7 @@ To use this feature:
 | 20x       | DPT          | 512        | 256    | [`maxvit_xlarge_tf_512`](https://huggingface.co/timm/maxvit_xlarge_tf_512.in21k_ft_in1k) | Tversky       |
 | 20x       | DPT          | 512        | 256    | [`maxvit_large_tf_512`](https://huggingface.co/timm/maxvit_large_tf_512.in1k)   | Lovasz        |
 
-> **Backbone citation**: MaxViT – Tu et al., *"MaxViT: Multi-Axis Vision Transformer"* ([arXiv:2204.01697](https://arxiv.org/abs/2204.01697))
+> **Backbone**: MaxViT – Tu et al., *"MaxViT: Multi-Axis Vision Transformer"* ([arXiv:2204.01697](https://arxiv.org/abs/2204.01697))
 > Hugging Face models via [timm](https://huggingface.co/timm)
 
 ---
@@ -119,9 +121,11 @@ This method improves accuracy by aggregating predictions from multiple models us
 * Intermediate transformer tokens are reconstructed into spatial feature maps and progressively **decoded via a convolutional decoder**.
 * Offers **fine-grained segmentation** and superior **global consistency** compared to CNN-based approaches.
 
-> **Citation**: Ranftl et al., *"Vision Transformers for Dense Prediction"*
+> **Dense Prediction Transformers**: Ranftl et al., *"Vision Transformers for Dense Prediction"*
 > [DPT Paper (arXiv:2103.13413)](https://arxiv.org/abs/2103.13413)
 > [Hugging Face Model Card](https://huggingface.co/Intel/dpt-large)
 
 ---
+
+
 
