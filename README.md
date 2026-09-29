@@ -6,7 +6,7 @@
 
 A comprehensive deep learning framework for semantic segmentation of colorectal cancer histopathology images, developed for the **ICIP2025 Grand Challenge**. This repository provides tools for multi-resolution whole slide image processing, adaptive data augmentation, and ensemble model training using state-of-the-art transformer architectures.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
@@ -19,7 +19,7 @@ A comprehensive deep learning framework for semantic segmentation of colorectal 
 - [Results](#results)
 - [Citation](#citation)
 
-## 🎯 Overview
+## Overview
 
 This framework addresses the challenge of **Colorectal Cancer Tumor Grade Segmentation in Digital Histopathology Images** by providing:
 
@@ -31,17 +31,17 @@ This framework addresses the challenge of **Colorectal Cancer Tumor Grade Segmen
 
 The system processes whole slide images (`.svs`, `.tif`, `.tiff`) with corresponding GeoJSON annotations to generate pixel-wise segmentation masks for five distinct tissue classes.
 
-## ✨ Features
+## Features
 
-- **🔬 Multi-Scale Processing**: Handle WSIs at 60x, 40x, and 20x resolutions with efficient patch-based processing
-- **🤖 Adaptive Augmentation**: AI-powered augmentation strategy optimization using OpenAI GPT-4
-- **🏗️ Transformer Backbones**: MaxViT and DPT architectures for superior segmentation performance
-- **📊 Comprehensive Evaluation**: IoU, accuracy, precision, recall, and F1-score tracking with Weights & Biases integration
-- **🧩 Ensemble Methods**: Top-N soft voting with morphological post-processing
-- **🐳 Docker Support**: Pre-built container for easy deployment and reproducibility
-- **📈 Probability Maps**: Generate and visualize class probability distributions
+- **Multi-Scale Processing**: Handle WSIs at 60x, 40x, and 20x resolutions with efficient patch-based processing
+- **Adaptive Augmentation**: AI-powered augmentation strategy optimization using OpenAI GPT-4
+- **Transformer Backbones**: MaxViT and DPT architectures for superior segmentation performance
+- **Comprehensive Evaluation**: IoU, accuracy, precision, recall, and F1-score tracking with Weights & Biases integration
+- **Ensemble Methods**: Top-N soft voting with morphological post-processing
+- **Docker Support**: Pre-built container for easy deployment and reproducibility
+- **Probability Maps**: Generate and visualize class probability distributions
 
-## 📁 Dataset Structure
+## Dataset Structure
 
 The framework expects the following directory structure:
 
@@ -72,7 +72,7 @@ ICIP2025/
 | 3 | T-G3 | Red | Tumor Grade-3 (poorly differentiated) |
 | 4 | Normal Mucosa | Blue | Healthy tissue regions |
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Docker Deployment (Recommended)
 
@@ -106,7 +106,7 @@ cd ICIP2025
 
 2. **Configure paths** in `dsconvert.py` to match your local directory structure.
 
-## 🔧 Methodology
+## Methodology
 
 ### WSI Processing Pipeline
 
@@ -126,7 +126,7 @@ if (epoch) % update_interval == 0:
     train_transform = A.Compose(new_aug_code)
 ```
 
-## 🏗️ Model Architectures
+## Model Architectures
 
 ### Primary Configuration
 
@@ -143,7 +143,7 @@ if (epoch) % update_interval == 0:
 - **MaxViT**: Multi-axis vision transformer with excellent scaling properties
 - **Pre-trained Weights**: Models initialized with ImageNet-21k/1k pre-trained weights
 
-## ⚡ Advanced Features
+## Advanced Features
 
 ### Ensemble Voting
 
@@ -176,7 +176,7 @@ Dataset: High-resolution histopathological dataset...
 """
 ```
 
-## 📊 Usage
+## Usage
 
 ### Training
 
@@ -212,7 +212,7 @@ The framework provides comprehensive metrics:
 - **Per-class Metrics**: Precision, recall, F1-score for each tissue type
 - **Visualization**: Overlay maps and probability distributions
 
-## 📈 Results
+## Results
 
 The multi-resolution ensemble approach demonstrates:
 
@@ -221,9 +221,23 @@ The multi-resolution ensemble approach demonstrates:
 - **Multi-scale Consistency**: Ensemble across resolutions improves robustness
 - **Adaptive Learning**: GPT-optimized augmentations boost performance
 
-## 📚 Citation
+## Citation
 
 If you use this work in your research, please cite:
+
+```bibtex
+@inproceedings{ccauglar2026colorectal,
+  title={Colorectal cancer segmentation with adaptive augmentation and multiresolution ensemble models},
+  author={{\c{C}}a{\u{g}}lar, {\"U}mit Mert and Temizel, Alptekin},
+  booktitle={Eighteenth International Conference on Machine Vision (ICMV 2025)},
+  volume={14114},
+  pages={134--141},
+  year={2026},
+  organization={SPIE}
+}
+```
+
+The ICIP2025 Colorectal Cancer Tumor Grade Segmentation in Digital Histopathology Images: From Giga to Mini Challenge paper: 
 
 ```bibtex
 @article{bahcekapili2025colorectal,
@@ -234,11 +248,11 @@ If you use this work in your research, please cite:
 }
 ```
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please feel free to submit issues, feature requests, or pull requests.
 
-## 📄 License
+## License
 
 This project is intended for research purposes. Please check the ICIP2025 Grand Challenge terms and conditions for usage restrictions.
 
